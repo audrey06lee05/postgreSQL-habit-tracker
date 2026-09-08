@@ -17,6 +17,9 @@ Built as a learning project focused on React state/hooks, REST API design, and r
 
 Both child tables use `ON DELETE CASCADE`, so deleting a habit cleans up its completions and achievements automatically.
 
+<img width="942" height="588" alt="image" src="https://github.com/user-attachments/assets/1109d47d-2abc-4a48-8869-1f69af9d1b4c" />
+
+
 ## 🏗️ API Endpoints
 | Method | Endpoint | Returns |
 |---|---|---|
