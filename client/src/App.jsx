@@ -45,10 +45,28 @@ function App() {
     });
   }
 
+  // Check in: mark a habit complete for today, then refresh the list
+  function handleCheckIn(id) {
+    fetch(`http://localhost:3001/api/habits/${id}/complete`, {
+      method: "POST",
+    }).then(() => {
+      fetchHabits();
+    });
+  }
+
   // Delete: remove a habit by id, then refresh the list
   function handleDelete(id) {
     fetch(`http://localhost:3001/api/habits/${id}`, {
       method: "DELETE",
+    }).then(() => {
+      fetchHabits();
+    });
+  }
+
+  // Check in: mark a habit complete for today, then refresh the list
+  function handleCheckIn(id) {
+    fetch(`http://localhost:3001/api/habits/${id}/complete`, {
+      method: "POST",
     }).then(() => {
       fetchHabits();
     });
@@ -88,6 +106,7 @@ function App() {
         {habits.map((habit) => (
           <li key={habit.id}>
             <strong>{habit.name}</strong> — {habit.category}
+            <button onClick={() => handleCheckIn(habit.id)}>Check In</button>
             <button onClick={() => handleDelete(habit.id)}>Delete</button>
           </li>
         ))}
