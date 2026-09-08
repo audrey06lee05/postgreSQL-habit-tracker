@@ -13,6 +13,7 @@ function App() {
   const [description, setDescription] = useState(""); // controlled input: new habit's description
   const [category, setCategory] = useState("Health"); // controlled input: new habit's category
   const [calendars, setCalendars] = useState({}); // { habitId: [dates] }
+  const [filterCategory, setFilterCategory] = useState("All"); // which category to show in the list
 
   // ============================================================
   // EFFECTS
@@ -124,9 +125,21 @@ function App() {
         <button type="submit">Add Habit</button>
       </form>
 
+      {/* Category filter */}
+      <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+        <option>All</option>
+        <option>Health</option>
+        <option>Productivity</option>
+        <option>Fitness</option>
+        <option>Learning</option>
+        <option>Other</option>
+      </select>
+
       {/* Habit list */}
       <ul>
-        {habits.map((habit) => (
+        {habits
+          .filter((habit) => filterCategory === "All" || habit.category === filterCategory)
+          .map((habit) => (
           <li key={habit.id}>
             <strong>{habit.name}</strong> — {habit.category}
             {habit.completed_today && <span> ✓ done today</span>}
