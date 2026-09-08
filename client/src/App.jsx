@@ -106,7 +106,13 @@ function App() {
         {habits.map((habit) => (
           <li key={habit.id}>
             <strong>{habit.name}</strong> — {habit.category}
-            <button onClick={() => handleCheckIn(habit.id)}>Check In</button>
+            {habit.completed_today && <span> ✓ done today</span>}
+            <button
+              onClick={() => handleCheckIn(habit.id)}
+              disabled={habit.completed_today}
+            >
+              Check In
+            </button>
             <button onClick={() => handleDelete(habit.id)}>Delete</button>
           </li>
         ))}

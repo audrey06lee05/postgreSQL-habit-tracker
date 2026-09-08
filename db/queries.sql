@@ -29,3 +29,12 @@ RETURNING *;
 INSERT INTO habit_completions (habit_id, completion_date)
 VALUES ($1, CURRENT_DATE)
 RETURNING *;
+
+-- Get all habits with today's check-in status (GET /api/habits)
+SELECT h.*,
+  EXISTS (
+    SELECT 1 FROM habit_completions hc
+    WHERE hc.habit_id = h.id AND hc.completion_date = CURRENT_DATE
+  ) AS completed_today
+FROM habits h
+ORDER BY h.created_at DESC;

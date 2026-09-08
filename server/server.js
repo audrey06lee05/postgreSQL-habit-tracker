@@ -25,11 +25,17 @@ app.get("/api/health", async (req, res) => {
   res.json({ status: "ok", time: result.rows[0].now });
 });
 
-// Get all habits, newest first
+// Get all habits, newest first, with today's check-in status
 app.get("/api/habits", async (req, res) => {
-  const result = await pool.query(
-    "SELECT * FROM habits ORDER BY created_at DESC",
-  );
+  const result = await pool.query(`
+    SELECT h.*,
+      EXISTS (
+        SELECT 1 FROM habit_completions hc
+        WHERE hc.habit_id = h.id AND hc.completion_date = CURRENT_DATE
+      ) AS completed_today
+    FROM habits h
+    ORDER BY h.created_at DESC
+  `);
   res.json(result.rows);
 });
 
