@@ -13,3 +13,9 @@ SELECT * FROM habits ORDER BY created_at DESC;
 INSERT INTO habits (name, description, category)
 VALUES ($1, $2, $3)
 RETURNING *;
+
+-- Update an existing habit (PUT /api/habits/:id)
+UPDATE habits
+SET name = $1, description = $2, category = $3
+WHERE id = $4
+RETURNING *;

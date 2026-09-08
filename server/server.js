@@ -43,4 +43,15 @@ app.post("/api/habits", async (req, res) => {
   res.json(result.rows[0]);
 });
 
+// Update an existing habit by id
+app.put("/api/habits/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description, category } = req.body;
+  const result = await pool.query(
+    "UPDATE habits SET name = $1, description = $2, category = $3 WHERE id = $4 RETURNING *",
+    [name, description, category, id],
+  );
+  res.json(result.rows[0]);
+});
+
 app.listen(3001, () => console.log("Server running on port 3001"));
