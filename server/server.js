@@ -1,8 +1,12 @@
+// server.js — Express backend for the Habit Streak Tracker.
+// Handles API requests from the React frontend and talks to PostgreSQL.
+
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const { Pool } = require("pg");
 
+// Connection to the PostgreSQL database, using credentials from .env
 const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -12,14 +16,16 @@ const pool = new Pool({
 });
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.use(cors()); // allow the React app (different port) to call this API
+app.use(express.json()); // parse incoming JSON request bodies
 
+// Sanity check — confirms the server is running and can reach the database
 app.get("/api/health", async (req, res) => {
   const result = await pool.query("SELECT NOW()");
   res.json({ status: "ok", time: result.rows[0].now });
 });
 
+// Get all habits, newest first
 app.get("/api/habits", async (req, res) => {
   const result = await pool.query(
     "SELECT * FROM habits ORDER BY created_at DESC",
@@ -27,6 +33,7 @@ app.get("/api/habits", async (req, res) => {
   res.json(result.rows);
 });
 
+// Create a new habit
 app.post("/api/habits", async (req, res) => {
   const { name, description, category } = req.body;
   const result = await pool.query(
