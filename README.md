@@ -65,6 +65,10 @@ Both child tables use `ON DELETE CASCADE`, so deleting a habit cleans up its com
 Fill in a name, optional description, and category, then hit **Add**.
 #### ✅ Check In / Undo
 **Check In** marks a habit done for today; if that streak hits 7, 30, or 100 days, a badge unlocks. **Undo Check In** removes today's check-in and re-locks any badge the streak no longer reaches.
+#### ✏️ Edit
+**Edit** swaps a habit's card for an inline form to update its name, description, or category.
+#### 🔥 Streaks
+Each habit shows its current streak right on the card, e.g. "🔥 7-day streak (longest: 12)".
 #### 📅 Calendar
 **Show Calendar** reveals a GitHub-style heatmap of the current month, with completed days highlighted.
 #### 🏅 Badges
@@ -76,3 +80,5 @@ The Statistics section shows the best-performing habit plus every habit's total 
 
 ## 🗂️ Query Log
 `db/queries.sql` holds every raw SQL query used by the API, in the order the routes were built — CRUD on habits, the check-in/undo logic, the achievements lookups, and the stats aggregation (`GROUP BY` + `COUNT` + a `LEFT JOIN` so habits with zero completions still show up instead of disappearing).
+
+`db/seed_demo.sql` seeds 5 habits covering every badge/streak state (maxed out, partial, single badge, a broken-then-restarted streak, and a fresh habit with nothing yet) — handy for demos.
