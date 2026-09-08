@@ -143,6 +143,42 @@ function App() {
       .then((data) => setCalendars({ ...calendars, [id]: data.dates }));
   }
 
+  // Export: fetch every habit's completion history, combine it with stats +
+  // badges already in state, then download the result as one JSON file
+  function handleExport() {
+    Promise.all(
+      habits.map((habit) =>
+        fetch(`http://localhost:3001/api/habits/${habit.id}/completions`)
+          .then((res) => res.json())
+          .then((data) => ({ ...habit, completions: data.dates })),
+      ),
+    ).then((habitsWithCompletions) => {
+      const exportData = habitsWithCompletions.map((habit) => {
+        const habitStats = stats.find((s) => s.id === habit.id);
+        return {
+          ...habit,
+          total_completions: habitStats ? habitStats.total_completions : 0,
+          completion_percentage: habitStats
+            ? habitStats.completion_percentage
+            : 0,
+          badges: (achievements[habit.id] || []).map(
+            (b) => b.achievement_type,
+          ),
+        };
+      });
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "habit-data.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
   // ============================================================
   // HELPERS
   // ============================================================
@@ -333,6 +369,10 @@ function App() {
           </li>
         ))}
       </ul>
+
+      <button className="export-btn" onClick={handleExport}>
+        Export Data
+      </button>
     </div>
   );
 }
