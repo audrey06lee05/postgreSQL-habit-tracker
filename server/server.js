@@ -4,7 +4,10 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { Pool } = require("pg");
+const { Pool, types } = require("pg");
+// Keep DATE columns as plain "YYYY-MM-DD" strings instead of
+// converting them to JS Date objects, which shifts by timezone
+types.setTypeParser(1082, (val) => val);
 
 // Connection to the PostgreSQL database, using credentials from .env
 const pool = new Pool({
@@ -83,5 +86,67 @@ app.post("/api/habits/:id/complete", async (req, res) => {
     res.status(400).json({ error: "Already checked in today" });
   }
 });
+
+// Get completion dates + current/longest streak for one habit
+app.get("/api/habits/:id/completions", async (req, res) => {
+  const { id } = req.params;
+  const result = await pool.query(
+    "SELECT completion_date FROM habit_completions WHERE habit_id = $1 ORDER BY completion_date ASC",
+    [id],
+  );
+  const dates = result.rows.map((row) => row.completion_date);
+  const longestStreak = calculateLongestStreak(dates);
+  const currentStreak = calculateCurrentStreak(dates);
+  res.json({ dates, longestStreak, currentStreak });
+});
+
+// Calculate the longest streak from a sorted array of "YYYY-MM-DD" dates
+function calculateLongestStreak(dates) {
+  if (dates.length === 0) return 0;
+
+  const oneDay = 1000 * 60 * 60 * 24;
+  let longestStreak = 1;
+  let runningStreak = 1;
+
+  for (let i = 1; i < dates.length; i++) {
+    const diffInDays = (new Date(dates[i]) - new Date(dates[i - 1])) / oneDay;
+
+    if (diffInDays === 1) {
+      runningStreak++;
+    } else {
+      runningStreak = 1;
+    }
+
+    if (runningStreak > longestStreak) {
+      longestStreak = runningStreak;
+    }
+  }
+
+  return longestStreak;
+}
+
+// Calculate the current streak (must include today or yesterday to count)
+function calculateCurrentStreak(dates) {
+  if (dates.length === 0) return 0;
+
+  const oneDay = 1000 * 60 * 60 * 24;
+  const today = new Date().toISOString().split("T")[0];
+  const lastDate = dates[dates.length - 1];
+  const diffFromToday = (new Date(today) - new Date(lastDate)) / oneDay;
+
+  if (diffFromToday > 1) return 0; // last check-in too long ago, streak's broken
+
+  let currentStreak = 1;
+  for (let i = dates.length - 1; i > 0; i--) {
+    const diffInDays = (new Date(dates[i]) - new Date(dates[i - 1])) / oneDay;
+    if (diffInDays === 1) {
+      currentStreak++;
+    } else {
+      break;
+    }
+  }
+
+  return currentStreak;
+}
 
 app.listen(3001, () => console.log("Server running on port 3001"));
