@@ -8,6 +8,8 @@ Built as a learning project focused on React state/hooks, REST API design, and r
 * Node.js + Express
 * `pg` (raw SQL, no ORM)
 * React (Vite) — `fetch`, hooks, no state management library
+<img width="939" height="510" alt="image" src="https://github.com/user-attachments/assets/4535400c-683b-4f02-9265-a6ce317b202f" />
+
 
 ## 🗄️ Schema Design
 * **Habits** — name, description, category (constrained to Health/Productivity/Fitness/Learning/Other via a `CHECK`), and `created_at`.
