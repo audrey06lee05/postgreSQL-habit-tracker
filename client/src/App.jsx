@@ -14,6 +14,8 @@ function App() {
   const [category, setCategory] = useState("Health"); // controlled input: new habit's category
   const [calendars, setCalendars] = useState({}); // { habitId: [dates] }
   const [filterCategory, setFilterCategory] = useState("All"); // which category to show in the list
+  const [achievements, setAchievements] = useState({}); // { habitId: [badges] }
+  const [stats, setStats] = useState([]); // stats dashboard: total completions + completion % per habit
 
   // ============================================================
   // EFFECTS
@@ -21,6 +23,7 @@ function App() {
   // Load habits once, when the page first loads
   useEffect(() => {
     fetchHabits();
+    fetchStats();
   }, []);
 
   // ============================================================
@@ -31,6 +34,13 @@ function App() {
     fetch("http://localhost:3001/api/habits")
       .then((res) => res.json())
       .then((data) => setHabits(data));
+  }
+
+  // Read: get stats (total completions + completion %) for every habit
+  function fetchStats() {
+    fetch("http://localhost:3001/api/stats")
+      .then((res) => res.json())
+      .then((data) => setStats(data));
   }
 
   // Create: submit the form to add a new habit, then refresh the list
@@ -67,14 +77,22 @@ function App() {
 
   function toggleCalendar(id) {
     if (calendars[id]) {
-      const updated = { ...calendars };
-      delete updated[id];
-      setCalendars(updated);
+      const updatedCalendars = { ...calendars };
+      delete updatedCalendars[id];
+      setCalendars(updatedCalendars);
+
+      const updatedAchievements = { ...achievements };
+      delete updatedAchievements[id];
+      setAchievements(updatedAchievements);
       return;
     }
     fetch(`http://localhost:3001/api/habits/${id}/completions`)
       .then((res) => res.json())
       .then((data) => setCalendars({ ...calendars, [id]: data.dates }));
+
+    fetch(`http://localhost:3001/api/habits/${id}/achievements`)
+      .then((res) => res.json())
+      .then((data) => setAchievements({ ...achievements, [id]: data }));
   }
 
   // ============================================================
@@ -94,6 +112,16 @@ function App() {
       days.push(`${year}-${mm}-${dd}`);
     }
     return days;
+  }
+
+  // Find the habit with the highest completion percentage
+  function getBestHabit() {
+    if (stats.length === 0) return null;
+    return stats.reduce((best, current) =>
+      Number(current.completion_percentage) > Number(best.completion_percentage)
+        ? current
+        : best
+    );
   }
 
   // ============================================================
@@ -153,6 +181,15 @@ function App() {
             <button onClick={() => toggleCalendar(habit.id)}>
               {calendars[habit.id] ? "Hide Calendar" : "Show Calendar"}
             </button>
+            {achievements[habit.id] && achievements[habit.id].length > 0 && (
+              <div className="badges">
+                {achievements[habit.id].map((badge) => (
+                  <span key={badge.id} className="badge">
+                    🏅 {badge.achievement_type}
+                  </span>
+                ))}
+              </div>
+            )}
             {calendars[habit.id] && (
               <div className="heatmap">
                 {getDaysInCurrentMonth().map((day) => (
@@ -164,6 +201,23 @@ function App() {
                 ))}
               </div>
             )}
+          </li>
+        ))}
+      </ul>
+
+      {/* Statistics dashboard */}
+      <h2>Statistics</h2>
+      {stats.length > 0 && (
+        <p>
+          🏆 Best performing: <strong>{getBestHabit().name}</strong> (
+          {getBestHabit().completion_percentage}%)
+        </p>
+      )}
+      <ul>
+        {stats.map((stat) => (
+          <li key={stat.id}>
+            {stat.name} — {stat.total_completions} completions,{" "}
+            {stat.completion_percentage}%
           </li>
         ))}
       </ul>

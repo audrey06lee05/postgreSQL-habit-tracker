@@ -200,3 +200,20 @@
 .heatmap-day.completed {
   background: #1a9c72;
 }
+
+/* Achievement badges */
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.badge {
+  background: #fff1e6;
+  color: #c2410c;
+  border: 1px solid #f0c199;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}

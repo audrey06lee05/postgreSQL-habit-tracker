@@ -38,3 +38,24 @@ SELECT h.*,
   ) AS completed_today
 FROM habits h
 ORDER BY h.created_at DESC;
+
+-- Award a streak-milestone badge, skip silently if already earned (part of POST /api/habits/:id/complete)
+INSERT INTO achievements (habit_id, achievement_type)
+VALUES ($1, $2)
+ON CONFLICT (habit_id, achievement_type) DO NOTHING;
+
+-- Get all achievements earned for one habit (GET /api/habits/:id/achievements)
+SELECT * FROM achievements
+WHERE habit_id = $1
+ORDER BY earned_at DESC;
+
+-- Get stats for every habit — total completions and completion % since creation, capped at 100 (GET /api/stats)
+SELECT h.id, h.name, h.category,
+  COUNT(hc.id) AS total_completions,
+  LEAST(ROUND(
+    COUNT(hc.id)::numeric / GREATEST((CURRENT_DATE - h.created_at::date) + 1, 1) * 100,
+  1), 100.0) AS completion_percentage
+FROM habits h
+LEFT JOIN habit_completions hc ON hc.habit_id = h.id
+GROUP BY h.id
+ORDER BY total_completions DESC;

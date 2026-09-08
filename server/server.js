@@ -73,7 +73,7 @@ app.delete("/api/habits/:id", async (req, res) => {
   res.json({ message: "Habit deleted", deleted: result.rows[0] });
 });
 
-// Mark a habit complete for today
+// Mark a habit complete for today, award a badge if a streak milestone is hit
 app.post("/api/habits/:id/complete", async (req, res) => {
   const { id } = req.params;
   try {
@@ -81,10 +81,36 @@ app.post("/api/habits/:id/complete", async (req, res) => {
       "INSERT INTO habit_completions (habit_id, completion_date) VALUES ($1, CURRENT_DATE) RETURNING *",
       [id],
     );
+
+    const completions = await pool.query(
+      "SELECT completion_date FROM habit_completions WHERE habit_id = $1 ORDER BY completion_date ASC",
+      [id],
+    );
+    const dates = completions.rows.map((row) => row.completion_date);
+    const currentStreak = calculateCurrentStreak(dates);
+
+    const milestones = [7, 30, 100];
+    if (milestones.includes(currentStreak)) {
+      await pool.query(
+        "INSERT INTO achievements (habit_id, achievement_type) VALUES ($1, $2) ON CONFLICT (habit_id, achievement_type) DO NOTHING",
+        [id, `${currentStreak}-day-streak`],
+      );
+    }
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(400).json({ error: "Already checked in today" });
   }
+});
+
+// Get all achievements earned for one habit
+app.get("/api/habits/:id/achievements", async (req, res) => {
+  const { id } = req.params;
+  const result = await pool.query(
+    "SELECT * FROM achievements WHERE habit_id = $1 ORDER BY earned_at DESC",
+    [id],
+  );
+  res.json(result.rows);
 });
 
 // Get completion dates + current/longest streak for one habit
@@ -98,6 +124,22 @@ app.get("/api/habits/:id/completions", async (req, res) => {
   const longestStreak = calculateLongestStreak(dates);
   const currentStreak = calculateCurrentStreak(dates);
   res.json({ dates, longestStreak, currentStreak });
+});
+
+// Get stats for every habit — total completions and completion % since creation
+app.get("/api/stats", async (req, res) => {
+  const result = await pool.query(`
+    SELECT h.id, h.name, h.category,
+      COUNT(hc.id) AS total_completions,
+      LEAST(ROUND(
+        COUNT(hc.id)::numeric / GREATEST((CURRENT_DATE - h.created_at::date) + 1, 1) * 100,
+      1), 100.0) AS completion_percentage
+    FROM habits h
+    LEFT JOIN habit_completions hc ON hc.habit_id = h.id
+    GROUP BY h.id
+    ORDER BY total_completions DESC
+  `);
+  res.json(result.rows);
 });
 
 // Calculate the longest streak from a sorted array of "YYYY-MM-DD" dates
