@@ -45,32 +45,44 @@ app.get("/api/habits", async (req, res) => {
 // Create a new habit
 app.post("/api/habits", async (req, res) => {
   const { name, description, category } = req.body;
-  const result = await pool.query(
-    "INSERT INTO habits (name, description, category) VALUES ($1, $2, $3) RETURNING *",
-    [name, description, category],
-  );
-  res.json(result.rows[0]);
+  try {
+    const result = await pool.query(
+      "INSERT INTO habits (name, description, category) VALUES ($1, $2, $3) RETURNING *",
+      [name, description, category],
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(400).json({ error: "Could not create habit" });
+  }
 });
 
 // Update an existing habit by id
 app.put("/api/habits/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, category } = req.body;
-  const result = await pool.query(
-    "UPDATE habits SET name = $1, description = $2, category = $3 WHERE id = $4 RETURNING *",
-    [name, description, category, id],
-  );
-  res.json(result.rows[0]);
+  try {
+    const result = await pool.query(
+      "UPDATE habits SET name = $1, description = $2, category = $3 WHERE id = $4 RETURNING *",
+      [name, description, category, id],
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(400).json({ error: "Could not update habit" });
+  }
 });
 
 // Delete a habit by id
 app.delete("/api/habits/:id", async (req, res) => {
   const { id } = req.params;
-  const result = await pool.query(
-    "DELETE FROM habits WHERE id = $1 RETURNING *",
-    [id],
-  );
-  res.json({ message: "Habit deleted", deleted: result.rows[0] });
+  try {
+    const result = await pool.query(
+      "DELETE FROM habits WHERE id = $1 RETURNING *",
+      [id],
+    );
+    res.json({ message: "Habit deleted", deleted: result.rows[0] });
+  } catch (err) {
+    res.status(400).json({ error: "Could not delete habit" });
+  }
 });
 
 // Mark a habit complete for today, award a badge if a streak milestone is hit
@@ -100,6 +112,40 @@ app.post("/api/habits/:id/complete", async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     res.status(400).json({ error: "Already checked in today" });
+  }
+});
+
+// Undo today's check-in for a habit (only today — past days stay locked in)
+app.delete("/api/habits/:id/complete", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "DELETE FROM habit_completions WHERE habit_id = $1 AND completion_date = CURRENT_DATE RETURNING *",
+      [id],
+    );
+
+    // Recalculate the streak now that today's check-in is gone, and lock
+    // back any badge the streak no longer reaches
+    const completions = await pool.query(
+      "SELECT completion_date FROM habit_completions WHERE habit_id = $1 ORDER BY completion_date ASC",
+      [id],
+    );
+    const dates = completions.rows.map((row) => row.completion_date);
+    const currentStreak = calculateCurrentStreak(dates);
+
+    const milestones = [7, 30, 100];
+    for (const milestone of milestones) {
+      if (currentStreak < milestone) {
+        await pool.query(
+          "DELETE FROM achievements WHERE habit_id = $1 AND achievement_type = $2",
+          [id, `${milestone}-day-streak`],
+        );
+      }
+    }
+
+    res.json({ message: "Check-in removed", deleted: result.rows[0] });
+  } catch (err) {
+    res.status(400).json({ error: "Could not undo check-in" });
   }
 });
 

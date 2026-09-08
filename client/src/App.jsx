@@ -31,6 +31,7 @@ function App() {
   const [calendars, setCalendars] = useState({});
   const [filterCategory, setFilterCategory] = useState("All");
   const [achievements, setAchievements] = useState({});
+  const [streaks, setStreaks] = useState({});
   const [stats, setStats] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
@@ -56,6 +57,7 @@ function App() {
       .then((data) => {
         setHabits(data);
         fetchAllAchievements(data);
+        fetchAllStreaks(data);
       });
   }
 
@@ -70,6 +72,23 @@ function App() {
     });
   }
 
+  // Read: get current/longest streak for every habit at once
+  function fetchAllStreaks(habitsList) {
+    habitsList.forEach((habit) => {
+      fetch(`http://localhost:3001/api/habits/${habit.id}/completions`)
+        .then((res) => res.json())
+        .then((data) =>
+          setStreaks((prev) => ({
+            ...prev,
+            [habit.id]: {
+              currentStreak: data.currentStreak,
+              longestStreak: data.longestStreak,
+            },
+          })),
+        );
+    });
+  }
+
   // Read: get stats (total completions + completion %) for every habit
   function fetchStats() {
     fetch("http://localhost:3001/api/stats")
@@ -80,12 +99,15 @@ function App() {
   // Create: submit the form to add a new habit, then refresh the list
   function handleSubmit(e) {
     e.preventDefault();
+    if (!name.trim()) return; // don't submit a habit with no name
+
     fetch("http://localhost:3001/api/habits", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, description, category }),
     }).then(() => {
       fetchHabits();
+      fetchStats();
       setName("");
       setDescription("");
     });
@@ -97,15 +119,40 @@ function App() {
       method: "POST",
     }).then(() => {
       fetchHabits();
+      fetchStats();
+      refreshCalendarIfOpen(id);
     });
+  }
+
+  // Undo: remove today's check-in, then refresh the list
+  function handleUncheckIn(id) {
+    fetch(`http://localhost:3001/api/habits/${id}/complete`, {
+      method: "DELETE",
+    }).then(() => {
+      fetchHabits();
+      fetchStats();
+      refreshCalendarIfOpen(id);
+    });
+  }
+
+  // If this habit's calendar is currently open, re-fetch its dates so the
+  // heatmap reflects the check-in/undo that just happened
+  function refreshCalendarIfOpen(id) {
+    if (!calendars[id]) return;
+    fetch(`http://localhost:3001/api/habits/${id}/completions`)
+      .then((res) => res.json())
+      .then((data) => setCalendars((prev) => ({ ...prev, [id]: data.dates })));
   }
 
   // Delete: remove a habit by id, then refresh the list
   function handleDelete(id) {
+    if (!window.confirm("Delete this habit? This can't be undone.")) return;
+
     fetch(`http://localhost:3001/api/habits/${id}`, {
       method: "DELETE",
     }).then(() => {
       fetchHabits();
+      fetchStats();
     });
   }
 
@@ -127,6 +174,7 @@ function App() {
       }),
     }).then(() => {
       fetchHabits();
+      fetchStats();
       setEditingId(null);
     });
   }
@@ -161,9 +209,7 @@ function App() {
           completion_percentage: habitStats
             ? habitStats.completion_percentage
             : 0,
-          badges: (achievements[habit.id] || []).map(
-            (b) => b.achievement_type,
-          ),
+          badges: (achievements[habit.id] || []).map((b) => b.achievement_type),
         };
       });
 
@@ -301,13 +347,24 @@ function App() {
                   {habit.description && (
                     <p className="habit-desc">{habit.description}</p>
                   )}
+                  {streaks[habit.id] && streaks[habit.id].currentStreak > 0 && (
+                    <p className="streak-info">
+                      🔥 {streaks[habit.id].currentStreak}-day streak
+                      {streaks[habit.id].longestStreak >
+                        streaks[habit.id].currentStreak &&
+                        ` (longest: ${streaks[habit.id].longestStreak})`}
+                    </p>
+                  )}
                   <div className="habit-actions">
-                    <button
-                      onClick={() => handleCheckIn(habit.id)}
-                      disabled={habit.completed_today}
-                    >
-                      Check In
-                    </button>
+                    {habit.completed_today ? (
+                      <button onClick={() => handleUncheckIn(habit.id)}>
+                        Undo Check In
+                      </button>
+                    ) : (
+                      <button onClick={() => handleCheckIn(habit.id)}>
+                        Check In
+                      </button>
+                    )}
                     <button onClick={() => toggleCalendar(habit.id)}>
                       {calendars[habit.id] ? "Hide Calendar" : "Show Calendar"}
                     </button>

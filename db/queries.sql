@@ -59,3 +59,12 @@ FROM habits h
 LEFT JOIN habit_completions hc ON hc.habit_id = h.id
 GROUP BY h.id
 ORDER BY total_completions DESC;
+
+-- Undo today's check-in for a habit, only today (DELETE /api/habits/:id/complete)
+DELETE FROM habit_completions
+WHERE habit_id = $1 AND completion_date = CURRENT_DATE
+RETURNING *;
+
+-- Lock back a badge whose streak the undo dropped below (part of DELETE /api/habits/:id/complete)
+DELETE FROM achievements
+WHERE habit_id = $1 AND achievement_type = $2;
