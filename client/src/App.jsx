@@ -132,7 +132,7 @@ function App() {
       <h1>Habit Streak Tracker</h1>
 
       {/* Add-habit form */}
-      <form onSubmit={handleSubmit}>
+      <form className="habit-form" onSubmit={handleSubmit}>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -150,37 +150,46 @@ function App() {
           <option>Learning</option>
           <option>Other</option>
         </select>
-        <button type="submit">Add Habit</button>
+        <button type="submit">Add</button>
       </form>
 
       {/* Category filter */}
-      <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-        <option>All</option>
-        <option>Health</option>
-        <option>Productivity</option>
-        <option>Fitness</option>
-        <option>Learning</option>
-        <option>Other</option>
-      </select>
+      <div className="filter-row">
+        Filter:{" "}
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+          <option>All</option>
+          <option>Health</option>
+          <option>Productivity</option>
+          <option>Fitness</option>
+          <option>Learning</option>
+          <option>Other</option>
+        </select>
+      </div>
 
       {/* Habit list */}
-      <ul>
+      <ul className="habit-list">
         {habits
           .filter((habit) => filterCategory === "All" || habit.category === filterCategory)
           .map((habit) => (
-          <li key={habit.id}>
-            <strong>{habit.name}</strong> — {habit.category}
-            {habit.completed_today && <span> ✓ done today</span>}
-            <button
-              onClick={() => handleCheckIn(habit.id)}
-              disabled={habit.completed_today}
-            >
-              Check In
-            </button>
-            <button onClick={() => handleDelete(habit.id)}>Delete</button>
-            <button onClick={() => toggleCalendar(habit.id)}>
-              {calendars[habit.id] ? "Hide Calendar" : "Show Calendar"}
-            </button>
+          <li key={habit.id} className="habit-item">
+            <div className="habit-top">
+              <span className="habit-name">{habit.name}</span>
+              <span className="habit-cat">{habit.category}</span>
+              {habit.completed_today && <span className="done">✓ done today</span>}
+            </div>
+            {habit.description && <p className="habit-desc">{habit.description}</p>}
+            <div className="habit-actions">
+              <button
+                onClick={() => handleCheckIn(habit.id)}
+                disabled={habit.completed_today}
+              >
+                Check In
+              </button>
+              <button onClick={() => toggleCalendar(habit.id)}>
+                {calendars[habit.id] ? "Hide Calendar" : "Show Calendar"}
+              </button>
+              <button onClick={() => handleDelete(habit.id)}>Delete</button>
+            </div>
             {achievements[habit.id] && achievements[habit.id].length > 0 && (
               <div className="badges">
                 {achievements[habit.id].map((badge) => (
@@ -208,16 +217,18 @@ function App() {
       {/* Statistics dashboard */}
       <h2>Statistics</h2>
       {stats.length > 0 && (
-        <p>
+        <p className="best-stat">
           🏆 Best performing: <strong>{getBestHabit().name}</strong> (
           {getBestHabit().completion_percentage}%)
         </p>
       )}
-      <ul>
+      <ul className="stats-list">
         {stats.map((stat) => (
-          <li key={stat.id}>
-            {stat.name} — {stat.total_completions} completions,{" "}
-            {stat.completion_percentage}%
+          <li key={stat.id} className="stat-row">
+            <span>{stat.name}</span>
+            <span>
+              {stat.total_completions} completions · {stat.completion_percentage}%
+            </span>
           </li>
         ))}
       </ul>
