@@ -81,6 +81,11 @@
 }
 
 /* Habit calendar heatmap */
+.calendar-label {
+  color: var(--sub);
+  font-size: 0.75rem;
+  margin: 4px 0 0;
+}
 .heatmap {
   display: grid;
   grid-template-columns: repeat(7, 1fr); /* 7 columns = days of the week */

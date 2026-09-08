@@ -428,15 +428,18 @@ function App() {
                     })}
                   </div>
                   {calendars[habit.id] && (
-                    <div className="heatmap">
-                      {getDaysInCurrentMonth().map((day) => (
-                        <div
-                          key={day}
-                          className={`heatmap-day ${calendars[habit.id].includes(day) ? "completed" : ""}`}
-                          title={day}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      <p className="calendar-label">This month:</p>
+                      <div className="heatmap">
+                        {getDaysInCurrentMonth().map((day) => (
+                          <div
+                            key={day}
+                            className={`heatmap-day ${calendars[habit.id].includes(day) ? "completed" : ""}`}
+                            title={day}
+                          />
+                        ))}
+                      </div>
+                    </>
                   )}
                 </>
               )}
