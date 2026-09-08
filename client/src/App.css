@@ -59,6 +59,12 @@
   font-size: 0.78rem;
   margin-left: auto;
 }
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .habit-actions {
   display: flex;
   gap: 6px;
@@ -84,19 +90,67 @@
   border-color: var(--accent);
 }
 
-/* Achievement badges — plain text, no pill/box */
+/* Achievement badges — colored pills, greyed out + locked until earned */
 .badges {
-  color: var(--sub);
-  font-size: 0.78rem;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .badge {
-  margin-right: 8px;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid;
+}
+.badge.b7 {
+  background: #fff1e6;
+  color: #c2410c;
+  border-color: #f0c199;
+}
+.badge.b30 {
+  background: #eef1ff;
+  color: #4f6df5;
+  border-color: #c3cdff;
+}
+.badge.b100 {
+  background: #fff7e0;
+  color: #a3730a;
+  border-color: #f0d896;
+}
+.badge.locked {
+  background: transparent;
+  color: var(--sub);
+  border-color: var(--line);
+}
+@media (prefers-color-scheme: dark) {
+  .badge.b7 {
+    background: #3a2515;
+    color: #ffb27a;
+    border-color: #6b4a2a;
+  }
+  .badge.b30 {
+    background: #232a4a;
+    color: #8fa2ff;
+    border-color: #3d4a80;
+  }
+  .badge.b100 {
+    background: #332a10;
+    color: #ffdd8a;
+    border-color: #6b5720;
+  }
 }
 
 /* Statistics dashboard */
 .best-stat {
+  background: var(--accent-soft);
+  border-radius: 12px;
+  padding: 14px 16px;
   font-size: 0.85rem;
   margin: 0 0 10px;
+}
+.best-stat strong {
+  color: var(--accent);
 }
 .stats-list {
   list-style: none;

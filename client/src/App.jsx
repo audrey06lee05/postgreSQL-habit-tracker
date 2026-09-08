@@ -4,18 +4,38 @@
 import { useState, useEffect } from "react";
 import "./App.css";
 
+const MILESTONES = [
+  { type: "7-day-streak", label: "7-Day Streak", icon: "🔥", className: "b7" },
+  {
+    type: "30-day-streak",
+    label: "30-Day Streak",
+    icon: "⭐",
+    className: "b30",
+  },
+  {
+    type: "100-day-streak",
+    label: "100-Day Streak",
+    icon: "🏆",
+    className: "b100",
+  },
+];
+
 function App() {
   // ============================================================
   // STATE
   // ============================================================
-  const [habits, setHabits] = useState([]); // the list of habits fetched from the API
-  const [name, setName] = useState(""); // controlled input: new habit's name
-  const [description, setDescription] = useState(""); // controlled input: new habit's description
-  const [category, setCategory] = useState("Health"); // controlled input: new habit's category
-  const [calendars, setCalendars] = useState({}); // { habitId: [dates] }
-  const [filterCategory, setFilterCategory] = useState("All"); // which category to show in the list
-  const [achievements, setAchievements] = useState({}); // { habitId: [badges] }
-  const [stats, setStats] = useState([]); // stats dashboard: total completions + completion % per habit
+  const [habits, setHabits] = useState([]);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Health");
+  const [calendars, setCalendars] = useState({});
+  const [filterCategory, setFilterCategory] = useState("All");
+  const [achievements, setAchievements] = useState({});
+  const [stats, setStats] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState("Health");
 
   // ============================================================
   // EFFECTS
@@ -29,11 +49,25 @@ function App() {
   // ============================================================
   // API CALLS
   // ============================================================
-  // Read: get all habits from the backend
+  // Read: get all habits from the backend, then fetch each one's badges
   function fetchHabits() {
     fetch("http://localhost:3001/api/habits")
       .then((res) => res.json())
-      .then((data) => setHabits(data));
+      .then((data) => {
+        setHabits(data);
+        fetchAllAchievements(data);
+      });
+  }
+
+  // Read: get badges for every habit at once
+  function fetchAllAchievements(habitsList) {
+    habitsList.forEach((habit) => {
+      fetch(`http://localhost:3001/api/habits/${habit.id}/achievements`)
+        .then((res) => res.json())
+        .then((data) =>
+          setAchievements((prev) => ({ ...prev, [habit.id]: data })),
+        );
+    });
   }
 
   // Read: get stats (total completions + completion %) for every habit
@@ -75,24 +109,38 @@ function App() {
     });
   }
 
+  function startEdit(habit) {
+    setEditingId(habit.id);
+    setEditName(habit.name);
+    setEditDescription(habit.description);
+    setEditCategory(habit.category);
+  }
+
+  function handleUpdate(id) {
+    fetch(`http://localhost:3001/api/habits/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: editName,
+        description: editDescription,
+        category: editCategory,
+      }),
+    }).then(() => {
+      fetchHabits();
+      setEditingId(null);
+    });
+  }
+
   function toggleCalendar(id) {
     if (calendars[id]) {
       const updatedCalendars = { ...calendars };
       delete updatedCalendars[id];
       setCalendars(updatedCalendars);
-
-      const updatedAchievements = { ...achievements };
-      delete updatedAchievements[id];
-      setAchievements(updatedAchievements);
       return;
     }
     fetch(`http://localhost:3001/api/habits/${id}/completions`)
       .then((res) => res.json())
       .then((data) => setCalendars({ ...calendars, [id]: data.dates }));
-
-    fetch(`http://localhost:3001/api/habits/${id}/achievements`)
-      .then((res) => res.json())
-      .then((data) => setAchievements({ ...achievements, [id]: data }));
   }
 
   // ============================================================
@@ -120,7 +168,7 @@ function App() {
     return stats.reduce((best, current) =>
       Number(current.completion_percentage) > Number(best.completion_percentage)
         ? current
-        : best
+        : best,
     );
   }
 
@@ -156,7 +204,10 @@ function App() {
       {/* Category filter */}
       <div className="filter-row">
         Filter:{" "}
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+        >
           <option>All</option>
           <option>Health</option>
           <option>Productivity</option>
@@ -169,49 +220,98 @@ function App() {
       {/* Habit list */}
       <ul className="habit-list">
         {habits
-          .filter((habit) => filterCategory === "All" || habit.category === filterCategory)
+          .filter(
+            (habit) =>
+              filterCategory === "All" || habit.category === filterCategory,
+          )
           .map((habit) => (
-          <li key={habit.id} className="habit-item">
-            <div className="habit-top">
-              <span className="habit-name">{habit.name}</span>
-              <span className="habit-cat">{habit.category}</span>
-              {habit.completed_today && <span className="done">✓ done today</span>}
-            </div>
-            {habit.description && <p className="habit-desc">{habit.description}</p>}
-            <div className="habit-actions">
-              <button
-                onClick={() => handleCheckIn(habit.id)}
-                disabled={habit.completed_today}
-              >
-                Check In
-              </button>
-              <button onClick={() => toggleCalendar(habit.id)}>
-                {calendars[habit.id] ? "Hide Calendar" : "Show Calendar"}
-              </button>
-              <button onClick={() => handleDelete(habit.id)}>Delete</button>
-            </div>
-            {achievements[habit.id] && achievements[habit.id].length > 0 && (
-              <div className="badges">
-                {achievements[habit.id].map((badge) => (
-                  <span key={badge.id} className="badge">
-                    🏅 {badge.achievement_type}
-                  </span>
-                ))}
-              </div>
-            )}
-            {calendars[habit.id] && (
-              <div className="heatmap">
-                {getDaysInCurrentMonth().map((day) => (
-                  <div
-                    key={day}
-                    className={`heatmap-day ${calendars[habit.id].includes(day) ? "completed" : ""}`}
-                    title={day}
+            <li key={habit.id} className="habit-item">
+              {editingId === habit.id ? (
+                <div className="edit-form">
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Habit name"
                   />
-                ))}
-              </div>
-            )}
-          </li>
-        ))}
+                  <input
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Description"
+                  />
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                  >
+                    <option>Health</option>
+                    <option>Productivity</option>
+                    <option>Fitness</option>
+                    <option>Learning</option>
+                    <option>Other</option>
+                  </select>
+                  <div className="habit-actions">
+                    <button onClick={() => handleUpdate(habit.id)}>Save</button>
+                    <button onClick={() => setEditingId(null)}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="habit-top">
+                    <span className="habit-name">{habit.name}</span>
+                    <span className="habit-cat">{habit.category}</span>
+                    {habit.completed_today && (
+                      <span className="done">✓ done today</span>
+                    )}
+                  </div>
+                  {habit.description && (
+                    <p className="habit-desc">{habit.description}</p>
+                  )}
+                  <div className="habit-actions">
+                    <button
+                      onClick={() => handleCheckIn(habit.id)}
+                      disabled={habit.completed_today}
+                    >
+                      Check In
+                    </button>
+                    <button onClick={() => toggleCalendar(habit.id)}>
+                      {calendars[habit.id] ? "Hide Calendar" : "Show Calendar"}
+                    </button>
+                    <button onClick={() => startEdit(habit)}>Edit</button>
+                    <button onClick={() => handleDelete(habit.id)}>
+                      Delete
+                    </button>
+                  </div>
+                  <div className="badges">
+                    {MILESTONES.map((milestone) => {
+                      const earned = (achievements[habit.id] || []).some(
+                        (badge) => badge.achievement_type === milestone.type,
+                      );
+                      return (
+                        <span
+                          key={milestone.type}
+                          className={`badge ${earned ? milestone.className : "locked"}`}
+                        >
+                          {earned
+                            ? `${milestone.icon} ${milestone.label}`
+                            : "🔒"}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {calendars[habit.id] && (
+                    <div className="heatmap">
+                      {getDaysInCurrentMonth().map((day) => (
+                        <div
+                          key={day}
+                          className={`heatmap-day ${calendars[habit.id].includes(day) ? "completed" : ""}`}
+                          title={day}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </li>
+          ))}
       </ul>
 
       {/* Statistics dashboard */}
@@ -227,7 +327,8 @@ function App() {
           <li key={stat.id} className="stat-row">
             <span>{stat.name}</span>
             <span>
-              {stat.total_completions} completions · {stat.completion_percentage}%
+              {stat.total_completions} completions ·{" "}
+              {stat.completion_percentage}%
             </span>
           </li>
         ))}
