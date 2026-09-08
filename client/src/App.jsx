@@ -37,6 +37,7 @@ function App() {
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editCategory, setEditCategory] = useState("Health");
+  const [errorMessage, setErrorMessage] = useState(""); // shown as a banner when a request fails
 
   // ============================================================
   // EFFECTS
@@ -50,6 +51,14 @@ function App() {
   // ============================================================
   // API CALLS
   // ============================================================
+  function checkResponse(response) {
+    if (!response.ok) {
+      return response.json().then((data) => {
+        throw new Error(data.error || "Something went wrong");
+      });
+    }
+    return response.json();
+  }
   // Read: get all habits from the backend, then fetch each one's badges
   function fetchHabits() {
     fetch("http://localhost:3001/api/habits")
@@ -105,34 +114,46 @@ function App() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, description, category }),
-    }).then(() => {
-      fetchHabits();
-      fetchStats();
-      setName("");
-      setDescription("");
-    });
+    })
+      .then(checkResponse)
+      .then(() => {
+        setErrorMessage("");
+        fetchHabits();
+        fetchStats();
+        setName("");
+        setDescription("");
+      })
+      .catch((err) => setErrorMessage(err.message));
   }
 
   // Check in: mark a habit complete for today, then refresh the list
   function handleCheckIn(id) {
     fetch(`http://localhost:3001/api/habits/${id}/complete`, {
       method: "POST",
-    }).then(() => {
-      fetchHabits();
-      fetchStats();
-      refreshCalendarIfOpen(id);
-    });
+    })
+      .then(checkResponse)
+      .then(() => {
+        setErrorMessage("");
+        fetchHabits();
+        fetchStats();
+        refreshCalendarIfOpen(id);
+      })
+      .catch((err) => setErrorMessage(err.message));
   }
 
   // Undo: remove today's check-in, then refresh the list
   function handleUncheckIn(id) {
     fetch(`http://localhost:3001/api/habits/${id}/complete`, {
       method: "DELETE",
-    }).then(() => {
-      fetchHabits();
-      fetchStats();
-      refreshCalendarIfOpen(id);
-    });
+    })
+      .then(checkResponse)
+      .then(() => {
+        setErrorMessage("");
+        fetchHabits();
+        fetchStats();
+        refreshCalendarIfOpen(id);
+      })
+      .catch((err) => setErrorMessage(err.message));
   }
 
   // If this habit's calendar is currently open, re-fetch its dates so the
@@ -150,10 +171,14 @@ function App() {
 
     fetch(`http://localhost:3001/api/habits/${id}`, {
       method: "DELETE",
-    }).then(() => {
-      fetchHabits();
-      fetchStats();
-    });
+    })
+      .then(checkResponse)
+      .then(() => {
+        setErrorMessage("");
+        fetchHabits();
+        fetchStats();
+      })
+      .catch((err) => setErrorMessage(err.message));
   }
 
   function startEdit(habit) {
@@ -164,6 +189,8 @@ function App() {
   }
 
   function handleUpdate(id) {
+    if (!editName.trim()) return; // don't save a habit with no name
+
     fetch(`http://localhost:3001/api/habits/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -172,11 +199,15 @@ function App() {
         description: editDescription,
         category: editCategory,
       }),
-    }).then(() => {
-      fetchHabits();
-      fetchStats();
-      setEditingId(null);
-    });
+    })
+      .then(checkResponse)
+      .then(() => {
+        setErrorMessage("");
+        fetchHabits();
+        fetchStats();
+        setEditingId(null);
+      })
+      .catch((err) => setErrorMessage(err.message));
   }
 
   function toggleCalendar(id) {
@@ -260,6 +291,12 @@ function App() {
   return (
     <div>
       <h1>Habit Streak Tracker</h1>
+
+      {errorMessage && (
+        <p className="error-banner" onClick={() => setErrorMessage("")}>
+          ⚠ {errorMessage} (click to dismiss)
+        </p>
+      )}
 
       {/* Add-habit form */}
       <form className="habit-form" onSubmit={handleSubmit}>
