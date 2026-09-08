@@ -213,12 +213,22 @@ function calculateLongestStreak(dates) {
   return longestStreak;
 }
 
+// Build today's date as "YYYY-MM-DD" using the system's local time zone,
+// instead of .toISOString() (which always converts to UTC)
+function getTodayString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // Calculate the current streak (must include today or yesterday to count)
 function calculateCurrentStreak(dates) {
   if (dates.length === 0) return 0;
 
   const oneDay = 1000 * 60 * 60 * 24;
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayString();
   const lastDate = dates[dates.length - 1];
   const diffFromToday = (new Date(today) - new Date(lastDate)) / oneDay;
 
