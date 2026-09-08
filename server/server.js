@@ -64,4 +64,18 @@ app.delete("/api/habits/:id", async (req, res) => {
   res.json({ message: "Habit deleted", deleted: result.rows[0] });
 });
 
+// Mark a habit complete for today
+app.post("/api/habits/:id/complete", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "INSERT INTO habit_completions (habit_id, completion_date) VALUES ($1, CURRENT_DATE) RETURNING *",
+      [id],
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(400).json({ error: "Already checked in today" });
+  }
+});
+
 app.listen(3001, () => console.log("Server running on port 3001"));

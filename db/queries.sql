@@ -24,3 +24,8 @@ RETURNING *;
 DELETE FROM habits
 WHERE id = $1
 RETURNING *;
+
+-- Mark a habit complete for today (POST /api/habits/:id/complete)
+INSERT INTO habit_completions (habit_id, completion_date)
+VALUES ($1, CURRENT_DATE)
+RETURNING *;
