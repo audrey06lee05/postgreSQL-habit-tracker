@@ -54,4 +54,14 @@ app.put("/api/habits/:id", async (req, res) => {
   res.json(result.rows[0]);
 });
 
+// Delete a habit by id
+app.delete("/api/habits/:id", async (req, res) => {
+  const { id } = req.params;
+  const result = await pool.query(
+    "DELETE FROM habits WHERE id = $1 RETURNING *",
+    [id],
+  );
+  res.json({ message: "Habit deleted", deleted: result.rows[0] });
+});
+
 app.listen(3001, () => console.log("Server running on port 3001"));

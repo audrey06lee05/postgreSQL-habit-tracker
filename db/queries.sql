@@ -19,3 +19,8 @@ UPDATE habits
 SET name = $1, description = $2, category = $3
 WHERE id = $4
 RETURNING *;
+
+-- Delete a habit (DELETE /api/habits/:id)
+DELETE FROM habits
+WHERE id = $1
+RETURNING *;
