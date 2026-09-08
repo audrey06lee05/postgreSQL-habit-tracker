@@ -182,3 +182,21 @@
     border-right-color: var(--border);
   }
 }
+
+/* Habit calendar heatmap */
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr); /* 7 columns = days of the week */
+  gap: 3px;
+  margin-top: 10px;
+  max-width: 300px;
+}
+.heatmap-day {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #eee;
+  border-radius: 2px;
+}
+.heatmap-day.completed {
+  background: #1a9c72;
+}

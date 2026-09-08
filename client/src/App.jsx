@@ -12,6 +12,7 @@ function App() {
   const [name, setName] = useState(""); // controlled input: new habit's name
   const [description, setDescription] = useState(""); // controlled input: new habit's description
   const [category, setCategory] = useState("Health"); // controlled input: new habit's category
+  const [calendars, setCalendars] = useState({}); // { habitId: [dates] }
 
   // ============================================================
   // EFFECTS
@@ -63,13 +64,35 @@ function App() {
     });
   }
 
-  // Check in: mark a habit complete for today, then refresh the list
-  function handleCheckIn(id) {
-    fetch(`http://localhost:3001/api/habits/${id}/complete`, {
-      method: "POST",
-    }).then(() => {
-      fetchHabits();
-    });
+  function toggleCalendar(id) {
+    if (calendars[id]) {
+      const updated = { ...calendars };
+      delete updated[id];
+      setCalendars(updated);
+      return;
+    }
+    fetch(`http://localhost:3001/api/habits/${id}/completions`)
+      .then((res) => res.json())
+      .then((data) => setCalendars({ ...calendars, [id]: data.dates }));
+  }
+
+  // ============================================================
+  // HELPERS
+  // ============================================================
+  // Build an array of every day in the current month as "YYYY-MM-DD" strings
+  function getDaysInCurrentMonth() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0 = January, 11 = December
+    const daysInMonth = new Date(year, month + 1, 0).getDate(); // day 0 of next month = last day of this month
+
+    const days = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const mm = String(month + 1).padStart(2, "0");
+      const dd = String(day).padStart(2, "0");
+      days.push(`${year}-${mm}-${dd}`);
+    }
+    return days;
   }
 
   // ============================================================
@@ -114,6 +137,20 @@ function App() {
               Check In
             </button>
             <button onClick={() => handleDelete(habit.id)}>Delete</button>
+            <button onClick={() => toggleCalendar(habit.id)}>
+              {calendars[habit.id] ? "Hide Calendar" : "Show Calendar"}
+            </button>
+            {calendars[habit.id] && (
+              <div className="heatmap">
+                {getDaysInCurrentMonth().map((day) => (
+                  <div
+                    key={day}
+                    className={`heatmap-day ${calendars[habit.id].includes(day) ? "completed" : ""}`}
+                    title={day}
+                  />
+                ))}
+              </div>
+            )}
           </li>
         ))}
       </ul>
