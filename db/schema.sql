@@ -2,7 +2,7 @@ CREATE TABLE habits (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
-    category TEXT NOT NULL,
+    category TEXT NOT NULL CHECK (category IN ('Health', 'Productivity', 'Fitness', 'Learning', 'Other')),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
